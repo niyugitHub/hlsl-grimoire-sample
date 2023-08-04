@@ -84,7 +84,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     // 射出範囲は300
     light.spRange = 300.0f;
     //射出角度は25度
-    light.spAngle = Math::DegToRad(25.0);8
+    light.spAngle = Math::DegToRad(25.0);
 
     // モデルを初期化する
     // モデルを初期化するための情報を構築する
@@ -106,8 +106,42 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         //////////////////////////////////////
 
         // step-3 コントローラー左スティックでスポットライトを移動させる
+        // 左のアナログスティックで動かす
+        light.spPosition.x -= g_pad[0]->GetLStickXF();
+        if (g_pad[0]->IsPress(enButtonB))
+        {
+            // Bボタンが一緒に押されていたらY軸方向に動かす
+            light.spPosition.y += g_pad[0]->GetLStickYF();
+        }
+        else
+        {
+            // Z軸方向に動かす
+            light.spPosition.z -= g_pad[0]->GetLStickYF();
+        }
 
         // step-4 コントローラー右スティックでスポットライトを回転させる
+        // Y軸周りの回転クォータニオンを計算する
+        Quaternion pRotY;
+        pRotY.SetRotationY(g_pad[0]->GetRStickXF() * 0.01f);
+
+        // 計算したクォータニオンデライトの方向を回す
+        pRotY.Apply(light.spDirection);
+
+        // X軸周りの回転クォータニオンを計算する
+        Vector3 rotAxis;
+        rotAxis.Cross(g_vec3AxisY, light.spDirection);
+        Quaternion qRotX;
+        qRotX.SetRotation(rotAxis, g_pad[0]->GetRStickYF() * 0.01f);
+
+        // 計算したクォータニオンデライトの方向を回す
+        qRotX.Apply(light.spDirection);
+
+        // スポットライトモデルの回転クォータニオンを求める
+        Quaternion qRot;
+        qRot.SetRotation({ 0.0f,0.0f,-1.0f }, light.spDirection);
+
+        // スポットライトモデルのワールド行列を更新する
+        lightModel.UpdateWorldMatrix(light.spPosition, qRot, g_vec3One);
 		
         // 背景モデルをドロー
         bgModel.Draw(renderContext);
